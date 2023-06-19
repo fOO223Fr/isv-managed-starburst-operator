@@ -1,55 +1,45 @@
-name: GitHub Actions Demo
+name: Build and push all the software images
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+on:
+  push:
+    branches:
+      - main
+env:
+  IMAGE_REGISTRY: quay.io
+  REGISTRY_USER: sughosh
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 jobs:
-  Explore-GitHub-Actions:
+  build-image-and-push-backend:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v3
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
-        run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
-
-# name: Build and push all the software images
-# on:
-  # push:
-  #   branches:
-  #     - main
-# env:
-  # IMAGE_REGISTRY: quay.io
-  # IMAGE_REPOSITORY: ecosystem-appeng
-# jobs:
-  # build-image-and-push-backend:
-    # runs-on: ubuntu-latest
-    # steps:
-    # - uses: actions/checkout@v3
-    # - name: Setup Java JDK
-    #   uses: actions/setup-java@v3.5.1
-    #   with:
-    #     java-version: 17
-    #     java-package: jdk
-    #     distribution: 'corretto'
-    # - name: Set up Maven
-    #   uses: stCarolas/setup-maven@v4.4
-    #   with:
-    #     maven-version: 3.8.6
-    # - name: Build Quarkus JVM executable
-    #   run: |
-    #     cd tenant-manager-backend
-    #     #mvn package -Pnative
-    #     mvn package -DskipTests=true
+    - name: Checkout repo
+      uses: actions/checkout@v3
+    - name: Setup Go environment
+      uses: actions/setup-go@v4
+      with:
+        go-version: '^1.20.4'
+    - name: Check go version
+      run: go version
+    - name: Log in to Quay.io
+      uses: redhat-actions/podman-login@v1
+      with:
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASSWORD }}
+        registry: ${{ env.IMAGE_REGISTRY }}
+    - name: Setup operator-sdk
+      run: |
+        cd ~/
+        export ARCH=$(case $(uname -m) in x86_64) echo -n amd64 ;; aarch64) echo -n arm64 ;; *) echo -n $(uname -m) ;; esac)
+        export OS=$(uname | awk '{print tolower($0)}')
+        export OPERATOR_SDK_DL_URL=https://github.com/operator-framework/operator-sdk/releases/latest/download
+        curl -LO ${OPERATOR_SDK_DL_URL}/operator-sdk_${OS}_${ARCH}
+        chmod +x operator-sdk_${OS}_${ARCH} && sudo mv operator-sdk_${OS}_${ARCH} /usr/local/bin/operator-sdk
+        operator-sdk version
     # - name: Build and publish docker image
     #   env:
-    #     IMAGE_NAME: saas-tenant-manager-backend
+    #     IMAGE_NAME: isv-managed-starburst-operator
     #   run: |
-    #     cd tenant-manager-backend
+    #     cd ${{ IMAGE_NAME}}
     #     BUILD_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
     #     echo Build version is: ${BUILD_VERSION}
     #     IMAGE_FULL=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_NAME }}:${BUILD_VERSION}
@@ -61,58 +51,3 @@ jobs:
     #     docker tag ${IMAGE_FULL} ${IMAGE_LATEST}
     #     docker push ${IMAGE_FULL}
     #     #docker push ${IMAGE_LATEST}
-  # build-image-and-push-rules-engine:
-    # runs-on: ubuntu-latest
-    # steps:
-    # - uses: actions/checkout@v3
-    # - name: Setup Java JDK
-    #   uses: actions/setup-java@v3.5.1
-    #   with:
-    #     java-version: 17
-    #     java-package: jdk
-    #     distribution: 'corretto'
-    # - name: Set up Maven
-    #   uses: stCarolas/setup-maven@v4.4
-    #   with:
-    #     maven-version: 3.8.6
-    # - name: Build Quarkus JVM executable
-    #   run: |
-    #     cd tenant-manager-rules-engine
-    #     #mvn package -Pnative
-    #     mvn package
-    # - name: Build and publish docker image
-    #   env:
-    #     IMAGE_NAME: saas-tenant-manager-rules-engine
-    #   run: |
-    #     cd tenant-manager-rules-engine
-    #     BUILD_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-    #     echo Build version is: ${BUILD_VERSION}
-    #     IMAGE_FULL=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_NAME }}:${BUILD_VERSION}
-    #     IMAGE_LATEST=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
-    #     echo Building image: ${IMAGE_FULL}
-    #     docker login "${{ env.IMAGE_REGISTRY }}" --username="${{ secrets.REGISTRY_USERNAME }}" --password="${{ secrets.REGISTRY_PASSWORD }}"
-
-    #     docker build --build-arg BUILD_VERSION=${BUILD_VERSION} -t ${IMAGE_FULL} -f ./src/main/docker/Dockerfile.jvm .
-    #     docker tag ${IMAGE_FULL} ${IMAGE_LATEST}
-    #     docker push ${IMAGE_FULL}
-    #     docker push ${IMAGE_LATEST}
-  # build-image-and-push-frontend:
-    # runs-on: ubuntu-latest
-    # steps:
-    # - uses: actions/checkout@v3
-    # - name: Build and publish docker image
-    #   env:
-    #     IMAGE_NAME: saas-tenant-manager-frontend
-    #   run: |
-    #     cd tenant-manager-frontend
-    #     BUILD_VERSION=$(grep '"version"' package.json | cut -d ':' -f2 | tr -d ' ",')
-    #     echo Build version is: ${BUILD_VERSION}
-    #     IMAGE_FULL=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_NAME }}:${BUILD_VERSION}
-    #     IMAGE_LATEST=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
-    #     echo Building image: ${IMAGE_FULL}
-    #     docker login "${{ env.IMAGE_REGISTRY }}" --username="${{ secrets.REGISTRY_USERNAME }}" --password="${{ secrets.REGISTRY_PASSWORD }}"
-
-    #     docker build --build-arg BUILD_VERSION=${BUILD_VERSION} -t ${IMAGE_FULL} .
-    #     docker tag ${IMAGE_FULL} ${IMAGE_LATEST}
-    #     docker push ${IMAGE_FULL}
-    #     docker push ${IMAGE_LATEST}
