@@ -1,13 +1,15 @@
 name: Build and push all the software images
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+run-name: ${{ github.actor }} has triggered a build 🚀
 on:
   push:
     branches:
       - main
 env:
+  IMAGE_NAME: isv-managed-starburst-operator
   IMAGE_REGISTRY: quay.io
   REGISTRY_USER: sughosh
   REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+  BUILD_VERSION: v0.69.0
 jobs:
   build-image-and-push-backend:
     runs-on: ubuntu-latest
@@ -17,7 +19,7 @@ jobs:
     - name: Setup Go environment
       uses: actions/setup-go@v4
       with:
-        go-version: '^1.20.4'
+        go-version: '1.20.4'
     - name: Check go version
       run: go version
     - name: Log in to Quay.io
@@ -35,19 +37,14 @@ jobs:
         curl -LO ${OPERATOR_SDK_DL_URL}/operator-sdk_${OS}_${ARCH}
         chmod +x operator-sdk_${OS}_${ARCH} && sudo mv operator-sdk_${OS}_${ARCH} /usr/local/bin/operator-sdk
         operator-sdk version
-    # - name: Build and publish docker image
-    #   env:
-    #     IMAGE_NAME: isv-managed-starburst-operator
-    #   run: |
-    #     cd ${{ IMAGE_NAME}}
-    #     BUILD_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-    #     echo Build version is: ${BUILD_VERSION}
-    #     IMAGE_FULL=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_NAME }}:${BUILD_VERSION}
-    #     IMAGE_LATEST=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
-    #     echo Building image: ${IMAGE_FULL}
-    #     docker login "${{ env.IMAGE_REGISTRY }}" --username="${{ secrets.REGISTRY_USERNAME }}" --password="${{ secrets.REGISTRY_PASSWORD }}"
-        
-    #     docker build --build-arg BUILD_VERSION=${BUILD_VERSION} -t ${IMAGE_FULL} -f ./src/main/docker/Dockerfile.jvm .
-    #     docker tag ${IMAGE_FULL} ${IMAGE_LATEST}
-    #     docker push ${IMAGE_FULL}
-    #     #docker push ${IMAGE_LATEST}
+    - name: Build and publish docker image
+      run: |
+        cd ${{ env.IMAGE_NAME }}
+        IMAGE_FULL=${{ env.IMAGE_REGISTRY }}/${{ env.REGISTRY_USER }}/${{ env.IMAGE_NAME }}:${{ env.BUILD_VERSION }}
+        echo IMAGE_FULL variable is: ${IMAGE_FULL}
+        echo Build and Push operator image: ${IMAGE_FULL}
+        make docker-build docker-push IMG="${IMAGE_FULL}"
+        echo Making operator bundle
+        make bundle IMG="${IMAGE_FULL}:${{ env.BUILD_VERSION }}" CHANNELS="alpha" DEFAULT_CHANNEL="alpha" VERSION="${{ env.BUILD_VERSION }}"
+        echo Build and Push operator bundle image: ${IMAGE_FULL}-bundle
+        make bundle-build bundle-push BUNDLE_IMG=${IMAGE_FULL}-bundle:${{ env.BUILD_VERSION }}"
