@@ -9,7 +9,7 @@ env:
   IMAGE_REGISTRY: quay.io
   REGISTRY_USER: sughosh
   REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-  BUILD_VERSION: v0.69.0
+  BUILD_VERSION: 0.69.0
 jobs:
   build-image-and-push-backend:
     runs-on: ubuntu-latest
@@ -38,11 +38,10 @@ jobs:
     - name: Build and publish docker image
       run: |
         cd ${GITHUB_WORKSPACE}
-        IMAGE_FULL=${{ env.IMAGE_REGISTRY }}/${{ env.REGISTRY_USER }}/${{ env.IMAGE_NAME }}:${{ env.BUILD_VERSION }}
-        echo IMAGE_FULL variable is: ${IMAGE_FULL}
+        IMAGE_FULL=${{ env.IMAGE_REGISTRY }}/${{ env.REGISTRY_USER }}/${{ env.IMAGE_NAME }}:v${{ env.BUILD_VERSION }}
         echo Build and Push operator image: ${IMAGE_FULL}
         make docker-build docker-push IMG="${IMAGE_FULL}"
         echo Making operator bundle
-        make bundle IMG="${IMAGE_FULL}:${{ env.BUILD_VERSION }}" CHANNELS="alpha" DEFAULT_CHANNEL="alpha" VERSION="${{ env.BUILD_VERSION }}"
+        make bundle IMG="${IMAGE_FULL}" CHANNELS="alpha" DEFAULT_CHANNEL="alpha" VERSION="${{ env.BUILD_VERSION }}"
         echo Build and Push operator bundle image: ${IMAGE_FULL}-bundle
-        make bundle-build bundle-push BUNDLE_IMG=${IMAGE_FULL}-bundle:${{ env.BUILD_VERSION }}"
+        make bundle-build bundle-push BUNDLE_IMG=${IMAGE_FULL}-bundle:v${{ env.BUILD_VERSION }}"
