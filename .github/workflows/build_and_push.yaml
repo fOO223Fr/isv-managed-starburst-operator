@@ -20,8 +20,6 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: '1.20.4'
-    - name: Check go version
-      run: go version
     - name: Log in to Quay.io
       uses: redhat-actions/podman-login@v1
       with:
@@ -30,12 +28,7 @@ jobs:
         registry: ${{ env.IMAGE_REGISTRY }}
     - name: Setup operator-sdk
       run: |
-        echo  $GITHUB_WORKSPACE
-        ls
         cd ~/
-        echo "------"
-        ls
-        echo "------"
         export ARCH=$(case $(uname -m) in x86_64) echo -n amd64 ;; aarch64) echo -n arm64 ;; *) echo -n $(uname -m) ;; esac)
         export OS=$(uname | awk '{print tolower($0)}')
         export OPERATOR_SDK_DL_URL=https://github.com/operator-framework/operator-sdk/releases/latest/download
@@ -44,7 +37,7 @@ jobs:
         operator-sdk version
     - name: Build and publish docker image
       run: |
-        cd ${{ env.IMAGE_NAME }}
+        cd ${GITHUB_WORKSPACE}
         IMAGE_FULL=${{ env.IMAGE_REGISTRY }}/${{ env.REGISTRY_USER }}/${{ env.IMAGE_NAME }}:${{ env.BUILD_VERSION }}
         echo IMAGE_FULL variable is: ${IMAGE_FULL}
         echo Build and Push operator image: ${IMAGE_FULL}
