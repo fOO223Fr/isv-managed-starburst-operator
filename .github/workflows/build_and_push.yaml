@@ -44,9 +44,8 @@ jobs:
         make docker-build docker-push IMG="${IMAGE_FULL}:v${{ env.BUILD_VERSION }}"
         echo Making operator bundle
         make bundle IMG="${IMAGE_FULL}:v${{ env.BUILD_VERSION }}" CHANNELS="alpha" DEFAULT_CHANNEL="alpha" VERSION="${{ env.BUILD_VERSION }}"
-        ls -lR
-        #echo Build and Push operator bundle image: ${IMAGE_FULL}-bundle:v${{ env.BUILD_VERSION }}
-        #make bundle-build bundle-push BUNDLE_IMG="${IMAGE_FULL}-bundle:v${{ env.BUILD_VERSION }}"
+        echo Build and Push operator bundle image: ${IMAGE_FULL}-bundle:v${{ env.BUILD_VERSION }}
+        make bundle-build bundle-push BUNDLE_IMG="${IMAGE_FULL}-bundle:v${{ env.BUILD_VERSION }}"
     - name: Export artifact
       uses: actions/upload-artifact@v3
       with:
